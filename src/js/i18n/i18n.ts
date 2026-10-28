@@ -83,10 +83,42 @@ export const getLanguageFromUrl = (): SupportedLanguage => {
     return langMatch[1] as SupportedLanguage;
   }
 
+  if (import.meta.env.VITE_DESKTOP === 'true') {
+    return getDesktopLanguage();
+  }
+
   return 'en';
 };
 
 export const LANGUAGE_CHOICE_KEY = 'bentopdf-language';
+
+/**
+ * The desktop app has no language prefix in its URLs. It uses the language
+ * the app window stored (from the macOS preferred languages), falling back to
+ * the browser languages.
+ */
+function getDesktopLanguage(): SupportedLanguage {
+  const toSupported = (code: string | null | undefined) => {
+    if (!code) return null;
+    const lower = code.toLowerCase();
+    if (/^zh-(tw|hk|mo|hant)/.test(lower)) return 'zh-TW';
+    const primary = lower.split('-')[0];
+    return supportedLanguages.includes(primary as SupportedLanguage)
+      ? (primary as SupportedLanguage)
+      : null;
+  };
+  try {
+    const stored = toSupported(localStorage.getItem(LANGUAGE_CHOICE_KEY));
+    if (stored) return stored;
+  } catch {
+    // Storage can be unavailable; fall through to the browser languages.
+  }
+  for (const lang of navigator.languages ?? [navigator.language]) {
+    const match = toSupported(lang);
+    if (match) return match;
+  }
+  return 'en';
+}
 
 let initPromise: Promise<typeof i18next> | null = null;
 

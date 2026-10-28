@@ -1,4 +1,5 @@
 import { trHtml, trText } from '../i18n/i18n.js';
+import { absoluteAssetUrl } from './asset-url.js';
 export type WasmPackage = 'pymupdf' | 'ghostscript' | 'cpdf';
 
 interface WasmProviderConfig {
@@ -16,7 +17,7 @@ const CDN_DEFAULTS: Record<WasmPackage, string> = {
 };
 
 function envOrDefault(envVar: string | undefined, fallback: string): string {
-  return envVar || fallback;
+  return absoluteAssetUrl(envVar) || fallback;
 }
 
 const ENV_DEFAULTS: Record<WasmPackage, string> = {

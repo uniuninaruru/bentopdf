@@ -1,5 +1,7 @@
+import { absoluteAssetUrl } from '../utils/asset-url.js';
+
 const FONT_CDN =
-  import.meta.env.VITE_EMBEDPDF_FONTS_URL ||
+  absoluteAssetUrl(import.meta.env.VITE_EMBEDPDF_FONTS_URL) ||
   'https://cdn.jsdelivr.net/npm/@embedpdf';
 
 const CHARSET = {

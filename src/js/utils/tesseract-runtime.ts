@@ -1,4 +1,5 @@
 import Tesseract from 'tesseract.js';
+import { absoluteAssetUrl } from './asset-url.js';
 import {
   assertTesseractLanguagesAvailable,
   TESSERACT_AVAILABLE_LANGUAGES_ENV_KEY,
@@ -40,13 +41,13 @@ function getDefaultTesseractAssetEnv(): TesseractAssetEnv {
 function normalizeDirectoryUrl(url?: string): string | undefined {
   const trimmed = url?.trim();
   if (!trimmed) return undefined;
-  return trimmed.replace(/\/+$/, '');
+  return absoluteAssetUrl(trimmed.replace(/\/+$/, ''));
 }
 
 function normalizeFileUrl(url?: string): string | undefined {
   const trimmed = url?.trim();
   if (!trimmed) return undefined;
-  return trimmed.replace(/\/+$/, '');
+  return absoluteAssetUrl(trimmed.replace(/\/+$/, ''));
 }
 
 export function resolveTesseractAssetConfig(
