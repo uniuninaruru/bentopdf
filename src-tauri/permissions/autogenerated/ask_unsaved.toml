@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ask-unsaved"
+description = "Enables the ask_unsaved command without any pre-configured scope."
+commands.allow = ["ask_unsaved"]
+
+[[permission]]
+identifier = "deny-ask-unsaved"
+description = "Denies the ask_unsaved command without any pre-configured scope."
+commands.deny = ["ask_unsaved"]

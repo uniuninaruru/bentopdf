@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>BentoPDF</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg" />
+  </head>
+  <body>
+    <div id="app" class="app" data-state="welcome">
+      <header class="titlebar" data-tauri-drag-region>
+        <div class="titlebar-leading" data-tauri-drag-region>
+          <button class="tb-btn" id="btn-open" data-i18n-title="open">
+            <i class="ph ph-folder-open"></i>
+          </button>
+        </div>
+        <nav class="tabs" id="tabs" data-tauri-drag-region role="tablist"></nav>
+        <div class="titlebar-trailing" data-tauri-drag-region>
+          <button class="tb-btn needs-doc" id="btn-save" data-i18n-title="save">
+            <i class="ph ph-floppy-disk"></i>
+          </button>
+          <button
+            class="tb-btn tb-btn-label"
+            id="btn-tools"
+            aria-pressed="false"
+          >
+            <i class="ph ph-squares-four"></i><span data-i18n="tools"></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="welcome" id="welcome">
+          <div class="welcome-inner">
+            <img class="welcome-icon" src="/images/favicon.svg" alt="" />
+            <h1 class="welcome-title">BentoPDF</h1>
+            <p class="welcome-sub" data-i18n="welcomeSub"></p>
+            <div class="welcome-actions">
+              <button class="btn btn-primary" id="welcome-open">
+                <i class="ph ph-folder-open"></i
+                ><span data-i18n="openPdf"></span>
+                <kbd>⌘O</kbd>
+              </button>
+              <button class="btn" id="welcome-create">
+                <i class="ph ph-file-plus"></i
+                ><span data-i18n="createPdf"></span>
+              </button>
+            </div>
+            <p class="welcome-hint" data-i18n="dropHint"></p>
+            <div class="recent" id="recent" hidden>
+              <div class="recent-head">
+                <h2 data-i18n="recent"></h2>
+                <button
+                  class="link-btn"
+                  id="recent-clear"
+                  data-i18n="clear"
+                ></button>
+              </div>
+              <ul class="recent-list" id="recent-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="viewer" id="viewer-wrap">
+          <div id="viewer" class="viewer-host"></div>
+        </section>
+
+        <aside class="tool-panel" id="tool-panel" hidden aria-label="Tools">
+          <div class="tool-panel-head">
+            <input
+              type="search"
+              id="tool-search"
+              class="search"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <div class="tool-panel-body" id="tool-list"></div>
+        </aside>
+
+        <section
+          class="sheet"
+          id="sheet"
+          hidden
+          aria-modal="true"
+          role="dialog"
+        >
+          <div class="sheet-bar">
+            <div class="sheet-title">
+              <i class="ph" id="sheet-icon"></i>
+              <span id="sheet-name"></span>
+              <span class="sheet-doc" id="sheet-doc"></span>
+            </div>
+            <div class="sheet-actions">
+              <button class="btn" id="sheet-close" data-i18n="close"></button>
+            </div>
+          </div>
+          <div class="result-bar" id="result-bar" hidden>
+            <i class="ph ph-check-circle"></i>
+            <span class="result-text" id="result-text"></span>
+            <div class="result-actions" id="result-actions"></div>
+          </div>
+          <div class="sheet-body">
+            <iframe id="sheet-frame" title="Tool"></iframe>
+            <div class="sheet-loading" id="sheet-loading">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="drop-overlay" id="drop-overlay" hidden>
+          <div class="drop-card">
+            <i class="ph ph-file-arrow-down"></i>
+            <span data-i18n="dropToOpen"></span>
+          </div>
+        </div>
+      </main>
+
+      <div class="toast-stack" id="toasts" aria-live="polite"></div>
+      <div class="busy" id="busy" hidden>
+        <div class="busy-card">
+          <div class="spinner"></div>
+          <span id="busy-text"></span>
+        </div>
+      </div>
+      <dialog class="modal" id="modal">
+        <form method="dialog" class="modal-card">
+          <h2 id="modal-title"></h2>
+          <div id="modal-body" class="modal-body"></div>
+          <div class="modal-actions" id="modal-actions"></div>
+        </form>
+      </dialog>
+    </div>
+    <script type="module" src="/src/desktop/main.ts"></script>
+  </body>
+</html>

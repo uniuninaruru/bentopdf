@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Permissions for the app's own document windows. Tool pages run in same-origin iframes and do not get IPC access.",
+  "windows": ["doc-*"],
+  "permissions": [
+    "core:event:default",
+    "core:window:allow-close",
+    "core:window:allow-set-title",
+    "core:window:allow-start-dragging",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-toggle-maximize",
+    "allow-frontend-ready",
+    "allow-open-dialog",
+    "allow-open-recent",
+    "allow-recent-files",
+    "allow-clear-recent",
+    "allow-read-file",
+    "allow-save-dialog",
+    "allow-write-file",
+    "allow-set-document-state",
+    "allow-ask-unsaved",
+    "allow-close-window",
+    "allow-print-pdf",
+    "allow-new-window",
+    "allow-open-external",
+    "allow-log-line",
+    "allow-app-info"
+  ]
+}

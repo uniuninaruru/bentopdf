@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-log-line"
+description = "Enables the log_line command without any pre-configured scope."
+commands.allow = ["log_line"]
+
+[[permission]]
+identifier = "deny-log-line"
+description = "Denies the log_line command without any pre-configured scope."
+commands.deny = ["log_line"]

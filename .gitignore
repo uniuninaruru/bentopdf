@@ -61,3 +61,10 @@ bentopdf-pymupdf-wasm/
 /security-headers-docs.conf
 /dist-*.zip
 /docs/.vitepress/cache/
+
+# Desktop (Tauri) build
+/dist-desktop
+/src-tauri/target
+/src-tauri/gen/schemas
+# Offline assets fetched by scripts/desktop/fetch-offline-assets.mjs
+/public/desktop-assets
