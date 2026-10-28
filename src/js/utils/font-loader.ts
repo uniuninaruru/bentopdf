@@ -151,7 +151,20 @@ export function fallbackFontLanguages(text: string): Set<string> {
   for (const ch of text) {
     if (needsFontEmbedding(ch)) langs.add(getLanguageForChar(ch));
   }
+  // Kanji are shared with Chinese. In Japanese text (it has kana) or a
+  // Japanese UI, use the Japanese font so kanji get Japanese glyph shapes.
+  if (langs.has('chi_sim') && (langs.has('jpn') || prefersJapanese())) {
+    langs.delete('chi_sim');
+    langs.add('jpn');
+  }
   return langs;
+}
+
+function prefersJapanese(): boolean {
+  const docLang =
+    typeof document !== 'undefined' ? document.documentElement.lang : '';
+  const navLang = typeof navigator !== 'undefined' ? navigator.language : '';
+  return /^ja\b/i.test(docLang || '') || /^ja\b/i.test(navLang || '');
 }
 
 export function hasFallbackFonts(

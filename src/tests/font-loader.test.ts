@@ -36,6 +36,21 @@ describe('font-loader', () => {
       vi.unstubAllGlobals();
     });
 
+    it('uses the Japanese font for kanji in Japanese text', () => {
+      expect([...fallbackFontLanguages('日本語の注釈テスト')]).toEqual(['jpn']);
+      expect([...fallbackFontLanguages('漢字')]).toEqual(['chi_sim']);
+    });
+
+    it('uses the Japanese font for kanji-only text in a Japanese UI', () => {
+      const previous = document.documentElement.lang;
+      document.documentElement.lang = 'ja';
+      try {
+        expect([...fallbackFontLanguages('東京都')]).toEqual(['jpn']);
+      } finally {
+        document.documentElement.lang = previous;
+      }
+    });
+
     it('needs no font for text the standard fonts can encode', () => {
       expect(fallbackFontLanguages('Plain café š € “quotes”').size).toBe(0);
       expect([...fallbackFontLanguages('Příliš ŠĐČĆŽ')]).toEqual(['eng']);
