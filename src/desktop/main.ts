@@ -15,8 +15,21 @@ import {
   language,
 } from './i18n.js';
 import { Viewer } from './viewer.js';
-import { ToolPanel, ToolSheet, loadCatalog, type ToolDef } from './tools.js';
+import {
+  ToolPanel,
+  ToolSheet,
+  loadCatalog,
+  CONVERT_GROUP,
+  type ToolDef,
+} from './tools.js';
 import * as pages from './pages.js';
+import {
+  fileKind,
+  imageToPdf,
+  mimeFor,
+  pdfNameFor,
+  OPENABLE_EXTENSIONS,
+} from './convert.js';
 
 interface Doc {
   id: string;
@@ -25,6 +38,8 @@ interface Doc {
   path: string | null;
   writable: boolean;
   dirty: boolean;
+  /** Folder the Save panel starts in for a document that has no file yet. */
+  dir?: string | null;
 }
 
 const docs = new Map<string, Doc>();
@@ -306,12 +321,52 @@ async function renderRecent(): Promise<void> {
 
 const isPdfName = (name: string) => /\.pdf$/i.test(name);
 
+async function readAsFile(ref: FileRef): Promise<File> {
+  const bytes = await native.readFile(ref.path);
+  return new File([bytes as BlobPart], ref.name, { type: mimeFor(ref.name) });
+}
+
+/** Opens PDFs, turns images into PDFs, and sends other documents to their conversion tool. */
 async function openRefs(refs: FileRef[]): Promise<void> {
   if (!refs.length) return;
   await ensureViewer();
+  const forTools = new Map<string, FileRef[]>();
+  const sendToTool = (toolId: string, ref: FileRef) =>
+    forTools.set(toolId, [...(forTools.get(toolId) ?? []), ref]);
+
   for (const ref of refs) {
-    if (!isPdfName(ref.name)) {
-      toast(t('notPdf', { name: ref.name }), true);
+    const kind = fileKind(ref.name);
+    if (kind.type === 'unsupported') {
+      toast(t('unsupported', { name: ref.name }), true);
+      continue;
+    }
+    if (kind.type === 'tool') {
+      sendToTool(kind.toolId, ref);
+      continue;
+    }
+    if (kind.type === 'image') {
+      busy(t('converting'));
+      try {
+        const bytes = await native.readFile(ref.path);
+        let pdf: Uint8Array;
+        try {
+          pdf = await imageToPdf(bytes, ref.name);
+        } catch (e) {
+          // The web view cannot decode it; BentoPDF's own converter may.
+          native.log('warn', `image ${ref.name}: ${errorText(e)}`);
+          sendToTool(kind.fallbackTool, ref);
+          continue;
+        }
+        await openBytes(pdf, pdfNameFor(ref.name), dirname(ref.path));
+        native.log(
+          'info',
+          `converted ${ref.name} (${bytes.length} bytes) to PDF (${pdf.length} bytes)`
+        );
+      } catch (e) {
+        toast(t('openFailed', { name: ref.name, error: errorText(e) }), true);
+      } finally {
+        busy(null);
+      }
       continue;
     }
     const existing = [...docs.values()].find((d) => d.path === ref.path);
@@ -340,14 +395,49 @@ async function openRefs(refs: FileRef[]): Promise<void> {
     }
   }
   render();
+  await openInConversionTool(forTools);
+}
+
+/** Opens the conversion tool for documents that are not PDFs or images. */
+async function openInConversionTool(
+  forTools: Map<string, FileRef[]>
+): Promise<void> {
+  const [first, ...rest] = [...forTools];
+  if (!first) return;
+  const [toolId, refs] = first;
+  if (rest.length) {
+    const skipped = rest.flatMap(([, r]) => r.map((x) => x.name)).join('、');
+    toast(t('oneKindAtATime', { names: skipped }), true);
+  }
+  const { byId } = await loadCatalog();
+  const tool = byId.get(toolId);
+  if (!tool) {
+    for (const r of refs) toast(t('unsupported', { name: r.name }), true);
+    return;
+  }
+  busy(t('loading'));
+  let files: File[];
+  try {
+    files = await Promise.all(refs.map(readAsFile));
+  } catch (e) {
+    toast(errorText(e), true);
+    return;
+  } finally {
+    busy(null);
+  }
+  await openTool(tool, files);
 }
 
 async function openWithDialog(): Promise<void> {
-  const refs = await native.openDialog(true);
+  const refs = await native.openDialog(OPENABLE_EXTENSIONS);
   await openRefs(refs);
 }
 
-async function openBytes(bytes: Uint8Array, name: string): Promise<void> {
+async function openBytes(
+  bytes: Uint8Array,
+  name: string,
+  dir: string | null = null
+): Promise<void> {
   await ensureViewer();
   const fileName = isPdfName(name) ? name : `${name}.pdf`;
   const id = await viewer.open(bytes, fileName, true);
@@ -357,6 +447,7 @@ async function openBytes(bytes: Uint8Array, name: string): Promise<void> {
     path: null,
     writable: false,
     dirty: true,
+    dir,
   });
   order.push(id);
   activeId = id;
@@ -425,7 +516,7 @@ async function saveDoc(id: string, saveAs = false): Promise<boolean> {
   if (!target) {
     const picked = await native.saveDialog(
       suggestedName(doc),
-      dirname(doc.path)
+      dirname(doc.path) ?? doc.dir ?? null
     );
     if (!picked) return false;
     target = picked.path;
@@ -554,7 +645,7 @@ async function runPageOperation(op: PageOp): Promise<void> {
   }
   let other: Uint8Array | null = null;
   if (op === 'insert-file') {
-    const refs = await native.openDialog(true);
+    const refs = await native.openDialog(['pdf']);
     if (!refs.length) return;
     other = await native.readFile(refs[0].path);
   }
@@ -852,15 +943,16 @@ const sheet = new ToolSheet({
   sheetChanged: () => render(),
 });
 
-async function openTool(tool: ToolDef): Promise<void> {
+/** Opens a tool. With `files`, the tool gets those files and its PDF opens in a new tab. */
+async function openTool(tool: ToolDef, files?: File[]): Promise<void> {
   toolPanel.hide();
-  if (tool.usesDocument && !activeId && tool.autoApply) {
+  if (!files && tool.usesDocument && !activeId && tool.autoApply) {
     toast(t('needDoc'));
     return;
   }
   busy(t('preparing'));
   try {
-    await sheet.open(tool);
+    await sheet.open(tool, files);
   } catch (e) {
     toast(errorText(e), true);
   } finally {
@@ -975,6 +1067,9 @@ async function onMenu(id: string): Promise<void> {
   switch (id) {
     case 'file:open':
       return openWithDialog();
+    case 'file:create':
+      if (sheet.isOpen && !(await sheet.close())) return;
+      return toolPanel.show(false, '', CONVERT_GROUP);
     case 'file:close-tab':
       if (activeId) await closeDoc(activeId);
       else if (isTauri) await getCurrentWindow().close();
@@ -1025,14 +1120,7 @@ async function onMenu(id: string): Promise<void> {
 
 async function onFilesDropped(refs: FileRef[]): Promise<void> {
   if (sheet.isOpen) {
-    const files = await Promise.all(
-      refs.map(
-        async (r) =>
-          new File([(await native.readFile(r.path)) as BlobPart], r.name, {
-            type: isPdfName(r.name) ? 'application/pdf' : '',
-          })
-      )
-    );
+    const files = await Promise.all(refs.map(readAsFile));
     if (sheet.addFiles(files)) return;
   }
   await openRefs(refs);
@@ -1063,7 +1151,7 @@ function wireUi(): void {
   $('welcome-open').addEventListener('click', () => void openWithDialog());
   $('welcome-create').addEventListener(
     'click',
-    () => void toolPanel.show(true, 'PDF')
+    () => void toolPanel.show(false, '', CONVERT_GROUP)
   );
   $('btn-save').addEventListener('click', () => void saveActive(false));
   $('recent-clear').addEventListener('click', async () => {

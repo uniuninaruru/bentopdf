@@ -351,12 +351,23 @@ fn frontend_ready(app: AppHandle, window: WebviewWindow) -> ReadyInfo {
 }
 
 #[tauri::command]
-async fn open_dialog(app: AppHandle, window: WebviewWindow, pdf_only: bool) -> Result<Vec<FileRef>, String> {
+async fn open_dialog(
+    app: AppHandle,
+    window: WebviewWindow,
+    extensions: Vec<String>,
+) -> Result<Vec<FileRef>, String> {
     let picker_app = app.clone();
+    // Only plain extensions; the list only narrows what the panel shows.
+    let extensions: Vec<String> = extensions
+        .into_iter()
+        .filter(|e| !e.is_empty() && e.len() <= 10 && e.chars().all(|c| c.is_ascii_alphanumeric()))
+        .map(|e| e.to_ascii_lowercase())
+        .collect();
     let paths = tauri::async_runtime::spawn_blocking(move || {
         let mut dialog = picker_app.dialog().file().set_parent(&window);
-        if pdf_only {
-            dialog = dialog.add_filter("PDF", &["pdf", "PDF"]);
+        if !extensions.is_empty() {
+            let refs: Vec<&str> = extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter("Documents", &refs);
         }
         dialog.blocking_pick_files()
     })

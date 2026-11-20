@@ -31,39 +31,38 @@
       </header>
 
       <main class="workspace">
-        <section class="welcome" id="welcome">
-          <div class="welcome-inner">
-            <img class="welcome-icon" src="/images/favicon.svg" alt="" />
-            <h1 class="welcome-title">BentoPDF</h1>
-            <p class="welcome-sub" data-i18n="welcomeSub"></p>
-            <div class="welcome-actions">
-              <button class="btn btn-primary" id="welcome-open">
-                <i class="ph ph-folder-open"></i
-                ><span data-i18n="openPdf"></span>
-                <kbd>⌘O</kbd>
-              </button>
-              <button class="btn" id="welcome-create">
-                <i class="ph ph-file-plus"></i
-                ><span data-i18n="createPdf"></span>
-              </button>
-            </div>
-            <p class="welcome-hint" data-i18n="dropHint"></p>
-            <div class="recent" id="recent" hidden>
-              <div class="recent-head">
-                <h2 data-i18n="recent"></h2>
-                <button
-                  class="link-btn"
-                  id="recent-clear"
-                  data-i18n="clear"
-                ></button>
-              </div>
-              <ul class="recent-list" id="recent-list"></ul>
-            </div>
-          </div>
-        </section>
-
         <section class="viewer" id="viewer-wrap">
           <div id="viewer" class="viewer-host"></div>
+          <section class="welcome" id="welcome">
+            <div class="welcome-inner">
+              <img class="welcome-icon" src="/images/favicon.svg" alt="" />
+              <h1 class="welcome-title">BentoPDF</h1>
+              <p class="welcome-sub" data-i18n="welcomeSub"></p>
+              <div class="welcome-actions">
+                <button class="btn btn-primary" id="welcome-open">
+                  <i class="ph ph-folder-open"></i
+                  ><span data-i18n="openPdf"></span>
+                  <kbd>⌘O</kbd>
+                </button>
+                <button class="btn" id="welcome-create">
+                  <i class="ph ph-file-plus"></i
+                  ><span data-i18n="createPdf"></span>
+                </button>
+              </div>
+              <p class="welcome-hint" data-i18n="dropHint"></p>
+              <div class="recent" id="recent" hidden>
+                <div class="recent-head">
+                  <h2 data-i18n="recent"></h2>
+                  <button
+                    class="link-btn"
+                    id="recent-clear"
+                    data-i18n="clear"
+                  ></button>
+                </div>
+                <ul class="recent-list" id="recent-list"></ul>
+              </div>
+            </div>
+          </section>
         </section>
 
         <aside class="tool-panel" id="tool-panel" hidden aria-label="Tools">

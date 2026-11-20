@@ -60,6 +60,64 @@
         "name": "PDF Document",
         "role": "Editor",
         "rank": "Default"
+      },
+      {
+        "ext": [
+          "jpg",
+          "jpeg",
+          "png",
+          "gif",
+          "webp",
+          "bmp",
+          "heic",
+          "heif",
+          "tif",
+          "tiff",
+          "avif"
+        ],
+        "contentTypes": [
+          "public.jpeg",
+          "public.png",
+          "com.compuserve.gif",
+          "org.webmproject.webp",
+          "com.microsoft.bmp",
+          "public.heic",
+          "public.heif",
+          "public.tiff",
+          "public.avif"
+        ],
+        "name": "Image",
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": [
+          "doc",
+          "docx",
+          "xls",
+          "xlsx",
+          "ppt",
+          "pptx",
+          "odt",
+          "ods",
+          "odp",
+          "rtf"
+        ],
+        "contentTypes": [
+          "com.microsoft.word.doc",
+          "org.openxmlformats.wordprocessingml.document",
+          "com.microsoft.excel.xls",
+          "org.openxmlformats.spreadsheetml.sheet",
+          "com.microsoft.powerpoint.ppt",
+          "org.openxmlformats.presentationml.presentation",
+          "org.oasis-open.opendocument.text",
+          "org.oasis-open.opendocument.spreadsheet",
+          "org.oasis-open.opendocument.presentation",
+          "public.rtf"
+        ],
+        "name": "Office Document",
+        "role": "Viewer",
+        "rank": "Alternate"
       }
     ],
     "macOS": {

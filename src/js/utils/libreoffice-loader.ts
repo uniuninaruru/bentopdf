@@ -52,6 +52,46 @@ async function fetchAsDecompressedUrl(
   return URL.createObjectURL(new Blob([blob], { type: mimeType }));
 }
 
+/**
+ * Extra fonts for the conversion engine, as a comma-separated list of URLs
+ * (VITE_LIBREOFFICE_FONT_URLS). The engine ships without CJK fonts, so
+ * Japanese, Chinese or Korean text would come out as empty boxes unless a
+ * font covering it is provided. Unset by default.
+ */
+export function libreOfficeFontUrls(
+  value: string | undefined = import.meta.env.VITE_LIBREOFFICE_FONT_URLS
+): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+interface ExtraFont {
+  filename: string;
+  data: ArrayBuffer;
+}
+
+async function loadExtraFonts(): Promise<ExtraFont[]> {
+  const fonts = await Promise.all(
+    libreOfficeFontUrls().map(async (url): Promise<ExtraFont | null> => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const filename = decodeURIComponent(
+          new URL(url, location.href).pathname.split('/').pop() || 'font.ttf'
+        );
+        return { filename, data: await response.arrayBuffer() };
+      } catch (error) {
+        // A missing font only affects the scripts it covers; keep converting.
+        console.warn(`[LibreOffice] Could not load font ${url}:`, error);
+        return null;
+      }
+    })
+  );
+  return fonts.filter((f): f is ExtraFont => f !== null);
+}
+
 export class LibreOfficeConverter {
   private converter: WorkerBrowserConverter | null = null;
   private initialized = false;
@@ -82,7 +122,7 @@ export class LibreOfficeConverter {
         message: trText('Loading conversion engine...'),
       });
 
-      const [sofficeWasmUrl, sofficeDataUrl] = await Promise.all([
+      const [sofficeWasmUrl, sofficeDataUrl, fonts] = await Promise.all([
         fetchAsDecompressedUrl(
           `${this.basePath}soffice.wasm.gz`,
           'application/wasm'
@@ -91,6 +131,7 @@ export class LibreOfficeConverter {
           `${this.basePath}soffice.data.gz`,
           'application/octet-stream'
         ),
+        loadExtraFonts(),
       ]);
 
       this.converter = new WorkerBrowserConverter({
@@ -100,6 +141,7 @@ export class LibreOfficeConverter {
         sofficeWorkerJs: `${this.basePath}soffice.worker.js`,
         browserWorkerJs: `${this.basePath}browser.worker.global.js`,
         verbose: false,
+        ...(fonts.length ? { fonts } : {}),
         onProgress: (info: {
           phase: string;
           percent: number;

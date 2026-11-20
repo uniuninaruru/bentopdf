@@ -64,9 +64,14 @@ function bentoTranslator(): Promise<(key: string) => string> {
 }
 
 interface CatalogGroup {
+  /** The category's English name in tools.ts, used as a stable key. */
+  key: string;
   title: string;
   tools: ToolDef[];
 }
+
+/** The category that creates PDFs from images, Office files and so on. */
+export const CONVERT_GROUP = 'Convert to PDF';
 
 let catalogCache: {
   groups: CatalogGroup[];
@@ -108,7 +113,11 @@ export async function loadCatalog(): Promise<{
     }
     const catKey = categoryTranslationKeys[category.name];
     if (tools.length)
-      groups.push({ title: (catKey && tr(catKey)) || category.name, tools });
+      groups.push({
+        key: category.name,
+        title: (catKey && tr(catKey)) || category.name,
+        tools,
+      });
   }
 
   // The desktop's own names for the two editing entry points.
@@ -130,6 +139,7 @@ export class ToolPanel {
   private list = document.getElementById('tool-list')!;
   private search = document.getElementById('tool-search') as HTMLInputElement;
   private button = document.getElementById('btn-tools')!;
+  private group: string | null = null;
 
   constructor(private onPick: (tool: ToolDef) => void) {
     this.search.placeholder = t('searchTools');
@@ -153,10 +163,12 @@ export class ToolPanel {
     else void this.show();
   }
 
-  async show(focusSearch = false, query = ''): Promise<void> {
+  /** Shows the panel; `group` limits the list to one category until the user searches. */
+  async show(focusSearch = false, query = '', group?: string): Promise<void> {
     this.panel.hidden = false;
     this.button.setAttribute('aria-pressed', 'true');
-    if (query !== undefined) this.search.value = query;
+    this.search.value = query;
+    this.group = group ?? null;
     await this.render();
     if (focusSearch) this.search.focus();
   }
@@ -176,7 +188,7 @@ export class ToolPanel {
         `${tool.name} ${tool.sub} ${tool.id}`.toLowerCase().includes(q)
       );
       if (matches.length) {
-        this.list.appendChild(this.group(null, matches));
+        this.list.appendChild(this.section(null, matches));
       } else {
         const empty = document.createElement('div');
         empty.className = 'tool-empty';
@@ -185,10 +197,12 @@ export class ToolPanel {
       }
       return;
     }
-    for (const g of groups) this.list.appendChild(this.group(g.title, g.tools));
+    const shown = groups.filter((g) => !this.group || g.key === this.group);
+    for (const g of shown.length ? shown : groups)
+      this.list.appendChild(this.section(g.title, g.tools));
   }
 
-  private group(title: string | null, tools: ToolDef[]): HTMLElement {
+  private section(title: string | null, tools: ToolDef[]): HTMLElement {
     const section = document.createElement('div');
     section.className = 'tool-group';
     if (title) {
@@ -228,6 +242,9 @@ interface Session {
   files: File[];
   results: ToolResult[];
   applied: boolean;
+  /** Files came from Open or a drop: open each PDF result in a new tab right away. */
+  autoOpen: boolean;
+  closeTimer?: number;
 }
 
 export class ToolSheet {
@@ -260,13 +277,18 @@ export class ToolSheet {
     return this.session?.tool.id ?? null;
   }
 
-  async open(tool: ToolDef): Promise<void> {
+  /**
+   * Opens a tool. Without `given`, a tool that works on a document gets the
+   * open one. With `given`, the tool gets those files instead and each PDF it
+   * produces opens in a new tab.
+   */
+  async open(tool: ToolDef, given?: File[]): Promise<void> {
     if (this.session && !(await this.close())) return;
     const active =
-      tool.usesDocument || tool.id === 'merge-pdf'
+      !given && (tool.usesDocument || tool.id === 'merge-pdf')
         ? this.api.activeDocument()
         : null;
-    let files: File[] = [];
+    let files: File[] = given ?? [];
     if (active) {
       files = [await this.api.documentFile(active.id)];
     }
@@ -277,12 +299,15 @@ export class ToolSheet {
       files,
       results: [],
       applied: false,
+      autoOpen: !!given?.length,
     };
     document.getElementById('sheet-icon')!.className = `ph ${tool.icon}`;
     document.getElementById('sheet-name')!.textContent = tool.name;
     document.getElementById('sheet-doc')!.textContent = active
       ? `— ${active.name}`
-      : '';
+      : given?.length
+        ? `— ${given.map((f) => f.name).join('、')}`
+        : '';
     this.resultBar.hidden = true;
     this.loading.hidden = false;
     this.sheet.hidden = false;
@@ -367,6 +392,17 @@ export class ToolSheet {
       s.applied = true;
       await this.close(true);
       this.api.toast(t('resultApplied', { tool: s.tool.name }));
+      return;
+    }
+    if (isPdf && s.autoOpen && !s.docId) {
+      await this.api.openBytes(new Uint8Array(await blob.arrayBuffer()), name);
+      s.applied = true;
+      this.api.toast(t('resultOpened', { name }));
+      // A tool converting several files sends several PDFs; close once they stop.
+      window.clearTimeout(s.closeTimer);
+      s.closeTimer = window.setTimeout(() => {
+        if (this.session === s) void this.close(true);
+      }, 800);
       return;
     }
     if (!isPdf) {

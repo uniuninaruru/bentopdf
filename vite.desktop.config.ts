@@ -10,6 +10,7 @@
 // Run with --mode desktop so .env.desktop points CDN assets at the bundled
 // copies in public/desktop-assets (see scripts/desktop/fetch-offline-assets.mjs).
 
+import { copyFileSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -63,6 +64,35 @@ function desktopPagesPlugin(): Plugin {
   };
 }
 
+// The LibreOffice worker checked into public/libreoffice-wasm predates the
+// converter's font injection, which the desktop build needs so Japanese text
+// in Office files is not rendered as empty boxes (see VITE_LIBREOFFICE_FONT_URLS
+// in .env.desktop). Ship the installed package's matching worker instead.
+const LO_WORKER_PATH = '/libreoffice-wasm/browser.worker.global.js';
+const LO_WORKER_SOURCE = resolve(
+  __dirname,
+  'node_modules/@matbee/libreoffice-converter/dist/browser.worker.global.js'
+);
+
+function libreOfficeWorkerPlugin(): Plugin {
+  let outDir = resolve(__dirname, 'dist-desktop');
+  return {
+    name: 'desktop-libreoffice-worker',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use(LO_WORKER_PATH, (_req, res) => {
+        res.setHeader('Content-Type', 'text/javascript');
+        res.end(readFileSync(LO_WORKER_SOURCE));
+      });
+    },
+    writeBundle() {
+      copyFileSync(LO_WORKER_SOURCE, resolve(outDir, `.${LO_WORKER_PATH}`));
+    },
+  };
+}
+
 export default defineConfig(async (env: ConfigEnv) => {
   const resolved =
     typeof baseConfig === 'function'
@@ -94,7 +124,7 @@ export default defineConfig(async (env: ConfigEnv) => {
 
   return {
     ...base,
-    plugins: [desktopPagesPlugin(), ...plugins],
+    plugins: [desktopPagesPlugin(), libreOfficeWorkerPlugin(), ...plugins],
     define: {
       ...base.define,
       __SIMPLE_MODE__: JSON.stringify(true),

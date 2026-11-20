@@ -74,9 +74,10 @@ export const native = {
     return invoke<ReadyInfo>('frontend_ready');
   },
 
-  async openDialog(pdfOnly = true): Promise<FileRef[]> {
-    if (!isTauri) return pickFiles(pdfOnly ? 'application/pdf' : '');
-    return invoke<FileRef[]>('open_dialog', { pdfOnly });
+  /** Open panel limited to the given extensions (lower case, no dot). */
+  async openDialog(extensions: string[] = ['pdf']): Promise<FileRef[]> {
+    if (!isTauri) return pickFiles(extensions.map((e) => `.${e}`).join(','));
+    return invoke<FileRef[]>('open_dialog', { extensions });
   },
 
   async readFile(path: string): Promise<Uint8Array> {

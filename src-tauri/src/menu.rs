@@ -79,6 +79,12 @@ pub fn build<R: Runtime>(
         .item(&item(app, "file:new-window", l.t("新規ウインドウ", "New Window"), Some("CmdOrCtrl+N"))?)
         .item(&item(app, "file:open", l.t("開く…", "Open…"), Some("CmdOrCtrl+O"))?)
         .item(&recent_menu)
+        .item(&item(
+            app,
+            "file:create",
+            l.t("画像・Office から PDF を作成…", "Create PDF from Images or Office…"),
+            None,
+        )?)
         .separator()
         .item(&item(app, "file:close-tab", l.t("タブを閉じる", "Close Tab"), Some("CmdOrCtrl+W"))?)
         .item(&item(app, "file:close-window", l.t("ウインドウを閉じる", "Close Window"), Some("Shift+CmdOrCtrl+W"))?)
